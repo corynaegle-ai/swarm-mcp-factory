@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 class MCPRegistry {
-  constructor(dbPath = '/opt/mcp-factory/registry.db') {
+  constructor(dbPath = '/opt/swarm-mcp-factory/registry.db') {
     this.dbPath = dbPath;
     this.db = null;
   }
@@ -273,7 +273,7 @@ Commands:
   remove <name>             Remove a server
 
 Examples:
-  node registry.js register /opt/mcp-factory/output/mcp-weather/manifest.json
+  node registry.js register /opt/swarm-mcp-factory/output/mcp-weather/manifest.json
   node registry.js get mcp-weather
   node registry.js list
   node registry.js list weather

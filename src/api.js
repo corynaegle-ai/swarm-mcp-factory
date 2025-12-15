@@ -1,3 +1,4 @@
+require("dotenv").config();
 /**
  * MCP Factory API Server
  * Express API orchestrating the full MCP generation pipeline
@@ -63,7 +64,7 @@ async function processJob(jobId, description, runtime = 'node') {
     stages.push('generate');
     
     const generator = new MCPGenerator();
-    const genResult = await generator.generate(spec, `/opt/mcp-factory/output/${spec.name}`);
+    const genResult = await generator.generate(spec, `/opt/swarm-mcp-factory/output/${spec.name}`);
     const serverDir = genResult.serverDir;
     
     // Stage 3: Validate generated code
@@ -93,7 +94,7 @@ async function processJob(jobId, description, runtime = 'node') {
     const packager = new MCPPackager();
     const pkgResult = await packager.package(serverDir, {
       runtime: runtime,
-      outputDir: '/opt/mcp-factory/packages'
+      outputDir: '/opt/swarm-mcp-factory/packages'
     });
     
     // Stage 5: Register in registry
@@ -102,8 +103,11 @@ async function processJob(jobId, description, runtime = 'node') {
     stages.push('register');
     
     await ensureRegistry();
-    const manifest = await registry.register(serverDir, {
-      packagePath: pkgResult.packagePath,
+    const manifest = await registry.register({
+      name: spec.name,
+      package_path: pkgResult.packagePath,
+      description: spec.description || '',
+      spec: spec,
       version: spec.version || '1.0.0'
     });
     
@@ -116,7 +120,9 @@ async function processJob(jobId, description, runtime = 'node') {
       result: {
         name: spec.name,
         serverDir,
-        packagePath: pkgResult.packagePath,
+        package_path: pkgResult.packagePath,
+      description: spec.description || '',
+      spec: spec,
         manifest,
         stages_completed: stages
       }
@@ -197,7 +203,7 @@ app.get('/api/jobs/:id', (req, res) => {
 app.get('/api/servers', async (req, res) => {
   try {
     await ensureRegistry();
-    const servers = registry.list();
+    const servers = await registry.list();
     res.json({ servers, count: servers.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -320,7 +326,7 @@ async function startup() {
     
     // Ensure output directories exist
     const fs = require('fs');
-    ['/opt/mcp-factory/output', '/opt/mcp-factory/packages'].forEach(dir => {
+    ['/opt/swarm-mcp-factory/output', '/opt/swarm-mcp-factory/packages'].forEach(dir => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
         console.log(`Created directory: ${dir}`);

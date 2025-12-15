@@ -37,7 +37,7 @@ class MCPGenerator {
       { path: 'src/client.ts', content: this.genClient(spec) },
       { path: 'README.md', content: this.genReadme(spec) },
       { path: 'Dockerfile', content: this.genDockerfile(spec) },
-      { path: 'claude_desktop_config.json', content: this.genClaudeConfig(spec) },
+      { path: 'claude_desktop_config.json', content: this.genClaudeConfig(spec, serverDir) },
     ];
 
     // Generate tool files
@@ -364,12 +364,12 @@ CMD ["node", "dist/index.js"]
 `;
   }
 
-  genClaudeConfig(spec) {
+  genClaudeConfig(spec, serverDir) {
     const config = {
       mcpServers: {
         [spec.name]: {
           command: "node",
-          args: [`/path/to/mcp-${spec.name}/dist/index.js`]
+          args: [`${serverDir}/dist/index.js`]
         }
       }
     };
