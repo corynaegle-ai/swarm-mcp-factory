@@ -7,6 +7,11 @@ const fs = require('fs').promises;
 const path = require('path');
 
 class MCPGenerator {
+  // Escape single quotes in strings for safe template insertion
+  escapeQuotes(str) {
+    return str ? str.replace(/'/g, "\'") : '';
+  }
+
   constructor(templatesDir = path.join(__dirname, '../templates')) {
     this.templatesDir = templatesDir;
   }
@@ -139,11 +144,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
 ${spec.tools.map(t => `    {
       name: '${t.name}',
-      description: '${t.description}',
+      description: '${this.escapeQuotes(t.description)}',
       inputSchema: {
         type: 'object',
         properties: {
-${(t.parameters || []).map(p => `          ${p.name}: { type: '${p.type}'${p.description ? `, description: '${p.description}'` : ''} }`).join(',\n')}
+${(t.parameters || []).map(p => `          ${p.name}: { type: '${p.type}'${p.description ? `, description: '${this.escapeQuotes(p.description)}'` : ''} }`).join(',\n')}
         },
         required: [${(t.parameters || []).filter(p => p.required).map(p => `'${p.name}'`).join(', ')}]
       }
@@ -183,7 +188,8 @@ main().catch(console.error);
         if (p.type === 'array') zodType = 'z.array(z.unknown())';
         if (p.enum) zodType = `z.enum([${p.enum.map(e => `'${e}'`).join(', ')}])`;
         if (!p.required) zodType += '.optional()';
-        if (p.default !== undefined) zodType += `.default(${JSON.stringify(p.default)})`;
+        // Only add default for primitives (not objects/arrays)
+        if (p.default !== undefined && typeof p.default !== 'object') zodType += `.default(${JSON.stringify(p.default)})`;
         return `  ${p.name}: ${zodType}`;
       });
       
@@ -220,7 +226,7 @@ ${toolSchemas.join('\n\n')}
   async get<T>(path: string): Promise<T> {
     const res = await fetch(\`\${this.baseUrl}\${path}\`, { headers: this.headers });
     if (!res.ok) throw new Error(\`API error: \${res.status}\`);
-    return res.json();
+    return res.json() as Promise<T>;
   }
 
   async post<T>(path: string, body: unknown): Promise<T> {
@@ -230,7 +236,7 @@ ${toolSchemas.join('\n\n')}
       body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error(\`API error: \${res.status}\`);
-    return res.json();
+    return res.json() as Promise<T>;
   }
 
   async put<T>(path: string, body: unknown): Promise<T> {
@@ -240,7 +246,7 @@ ${toolSchemas.join('\n\n')}
       body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error(\`API error: \${res.status}\`);
-    return res.json();
+    return res.json() as Promise<T>;
   }
 
   async delete<T>(path: string): Promise<T> {
@@ -249,7 +255,7 @@ ${toolSchemas.join('\n\n')}
       headers: this.headers
     });
     if (!res.ok) throw new Error(\`API error: \${res.status}\`);
-    return res.json();
+    return res.json() as Promise<T>;
   }
 }
 `;
